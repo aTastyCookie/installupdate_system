@@ -62,6 +62,28 @@ BOOL Is64BitOperatingSystem()
 }
 #pragma endregion
 
+std::string readHashFromFile(const char* filepath)
+{
+	char chh;
+	std::string res = "00112233445566778899aabbccddeeff";
+	std::ifstream txtfile("serviceapp.txt");
+	if (txtfile.is_open())
+	{
+		std::cout << "open\n";
+		while (txtfile.get(chh))
+			std::cout << chh << "lol";
+		system("pause");
+	}
+	/*for (int i = 0; i < 32; ++i)
+	{
+
+		res[i] = txtfile.get();
+		std::cout << res[i] << " " << txtfile.get();
+		system("pause"); 
+	}*/
+	return res;
+}
+
 //Скачивание нужного сервиса
 int GetService()
 {
@@ -108,12 +130,7 @@ int GetService()
 						// читаем данные
 						char  szData[1024];
 						DWORD dwBytesRead;
-						BOOL bRead =
-							::InternetReadFile(
-							hRequest,
-							szData, sizeof(szData)-1,
-							&dwBytesRead);
-
+						BOOL bRead = ::InternetReadFile(hRequest, szData, sizeof(szData)-1,&dwBytesRead);
 						// выход из цикла при ошибке или завершении
 						if (bRead == FALSE || dwBytesRead == 0)
 							break;
@@ -121,12 +138,10 @@ int GetService()
 						// сохраняем результат
 						szData[dwBytesRead] = 0;
 						fnews << szData;
-
-						/*
-						* Тут узнаём чё откуда качать
-						*/
-						HRESULT hr = URLDownloadToFile(NULL, _T("https://rananyev.ru/iuservice/files/mainservice.exe"), _T("iuservice.exe"), 0, NULL); // ссылку из файла выдрать
 					}
+					std::string hash = readHashFromFile("serviceapp.txt");
+					system("pause");
+					HRESULT hr = URLDownloadToFile(NULL, _T("https://rananyev.ru/iuservice/files/mainservice.exe"), _T("iuservice.exe"), 0, NULL); // ссылку из файла выдрать
 				}
 				else { std::cout << "req" << std::endl; std::cout << GetLastError(); }
 				// закрываем запрос
@@ -305,6 +320,6 @@ int _tmain(int argc, _TCHAR* argv[])
 		}
 	}
 	InstallAndStartService("IUservice", "IUservice", "iuservice.exe");
-	//system("pause");
+	system("pause");
 	return 0;
 }
