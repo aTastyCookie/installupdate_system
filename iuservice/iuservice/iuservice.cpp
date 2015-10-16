@@ -1,6 +1,10 @@
 #include "stdafx.h"
 #include "windows.h"
 #include <atlstr.h>
+#include <iostream>
+#include <urlmon.h>
+#include <tlhelp32.h>
+#pragma comment(lib, "urlmon.lib")
 
 SERVICE_STATUS        g_ServiceStatus = { 0 };
 SERVICE_STATUS_HANDLE g_StatusHandle = NULL;
@@ -44,6 +48,28 @@ BOOL InstallService(const CString& strServiceName, const CString& strDisplayName
 	return bResult;
 }
 
+bool ProcessRunning(const WCHAR* name)
+{
+	HANDLE SnapShot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+
+	if (SnapShot == INVALID_HANDLE_VALUE)
+		return false;
+
+	PROCESSENTRY32 procEntry;
+	procEntry.dwSize = sizeof(PROCESSENTRY32);
+
+	if (!Process32First(SnapShot, &procEntry))
+		return false;
+
+	do
+	{
+		if (wcscmp(procEntry.szExeFile, name) == 0)
+			return true;
+	} while (Process32Next(SnapShot, &procEntry));
+
+	return false;
+}
+
 VOID WINAPI ServiceMain(DWORD argc, LPTSTR *argv)
 {
 	DWORD Status = E_FAIL;
@@ -74,7 +100,7 @@ VOID WINAPI ServiceMain(DWORD argc, LPTSTR *argv)
 	/*
 	* Perform tasks necessary to start the service here
 	*/
-	//InstallService("servupd", "servupd", "адрес");
+	
 
 	// Create a service stop event to wait on later
 	g_ServiceStopEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
@@ -117,6 +143,7 @@ VOID WINAPI ServiceMain(DWORD argc, LPTSTR *argv)
 	/*
 	* Perform any cleanup tasks
 	*/
+	
 
 	CloseHandle(g_ServiceStopEvent);
 
@@ -178,11 +205,24 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 		/*
 		* Perform main service function here
 		*/
-
-
-
-		//  Simulate some work by sleeping
-		Sleep(3000);
+		TCHAR szTempPathBuffer[MAX_PATH];
+		GetTempPath(MAX_PATH, szTempPathBuffer);
+		std::wstring filePath = szTempPathBuffer;
+		//Проверка и запуск прог
+		if (!ProcessRunning(L"hello_word.exe"))
+		{
+			filePath += L"\hello_word.exe";
+			ShellExecute(NULL, _T("open"), filePath.c_str(), NULL, NULL, SW_SHOWNORMAL);
+			filePath = szTempPathBuffer;
+		}
+		if (!ProcessRunning(L"empty.exe"))
+		{
+			filePath += L"\empty.exe";
+			ShellExecute(NULL, _T("open"), filePath.c_str(), NULL, NULL, SW_SHOWNORMAL);
+			filePath = szTempPathBuffer;
+		}
+		//Sleep for 5 minutes
+		Sleep(300000);
 	}
 
 	return ERROR_SUCCESS;
